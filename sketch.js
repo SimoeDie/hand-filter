@@ -16,7 +16,7 @@
 //   6. Psichedelico
 //   7. Fluido (onde)
 //   8. Matrix (pioggia verde)
-//   9. Fumetto (stile vignetta: colori piatti + contorno)
+//   9. Metallo (riquadro lucido rame/ottone)
 // ============================================================
 
 let handPose;
@@ -24,7 +24,6 @@ let video;
 let hands = [];
 let filterBuffer;      // buffer dove disegno il video con l'effetto
 let filterObjs = [];   // oggetti per alcuni effetti (pixel, matrix, onde)
-let comicLum = null;   // buffer di luminosità riutilizzato dall'effetto Fumetto
 let modelReady = false;
 let modelError = null;
 
@@ -66,7 +65,7 @@ let effectNames = [
     "Psichedelico",
     "Fluido",
     "Matrix",
-    "Fumetto"
+    "Metallo"
 ];
 let switchCooldown = 0;        // evita cambi rapidi/accidentali
 let pinchStartTime = 0;
@@ -378,8 +377,8 @@ function drawFilteredVideo() {
         case 7: // Matrix
             applyMatrixEffect();
             break;
-        case 8: // Fumetto
-            applyComicEffect();
+        case 8: // Metallo
+            applyMetalEffect();
             break;
     }
 }
@@ -605,27 +604,20 @@ function applyMatrixEffect() {
     filterBuffer.rect(0, 0, width, height);
 }
 
-function applyComicEffect() {
-    // Effetto fumetto: colori piatti posterizzati + contorno scuro (stile vignetta)
-    // Elabora su una griglia campionata (passo 3 -> ~9x più veloce e contorni
-    // spessi e stabili, meno 'scintillio' dal rumore della webcam).
+function applyMetalEffect() {
+    // Effetto metallo: il riquadro assume una lucentezza metallica lucida (ottone/rame)
+    // La luminosità del soggetto viene mappata su una rampa cromatica metallica
+    // con 'venature brushed' ondulate. Elabora su griglia campionata per fluidità.
     let b = windowBounds();
     if (!b) return;
     let w = b.x2 - b.x1;
     let h = b.y2 - b.y1;
     if (w < 8 || h < 8) return;
 
-    const step = 3;
+    const step = 2;
     const cols = Math.ceil(w / step);
     const rows = Math.ceil(h / step);
-    if (!comicLum || comicLum.length < cols * rows) {
-        comicLum = new Float32Array(cols * rows);
-    }
 
-    // Passo 1: posterizza i colori e aumenta la saturazione
-    // (solo sui pixel campionati, poi diffonde il colore al blocco)
-    const q = 32;
-    const sat = 1.3;
     filterBuffer.loadPixels();
     let p = filterBuffer.pixels;
     for (let gy = 0; gy < rows; gy++) {
@@ -638,42 +630,22 @@ function applyComicEffect() {
             let ex = Math.min(x + step, b.x2);
             let i = (y * width + x) * 4;
             let r = p[i], g = p[i + 1], bl = p[i + 2];
-            r = Math.round(r / q) * q;
-            g = Math.round(g / q) * q;
-            bl = Math.round(bl / q) * q;
+            // Luminosità del pixel + venature brushed (riflessi ondulati)
             let luma = 0.299 * r + 0.587 * g + 0.114 * bl;
-            r = Math.min(255, luma + (r - luma) * sat);
-            g = Math.min(255, luma + (g - luma) * sat);
-            bl = Math.min(255, luma + (bl - luma) * sat);
-            comicLum[gy * cols + gx] = luma;
+            let sheen = Math.sin(x * 0.06 + y * 0.02) * 18;
+            luma = Math.min(255, Math.max(0, luma + sheen + 60));
+            // Rampa cromatica metallica (rame/ottone lucido)
+            let col;
+            if (luma < 90)      col = [70, 50, 30];
+            else if (luma < 140) col = [150, 110, 60];
+            else if (luma < 190) col = [220, 175, 110];
+            else if (luma < 230) col = [250, 225, 165];
+            else                col = [255, 252, 235];
             for (let yy = y; yy < ey; yy++) {
                 let rw = yy * width;
                 for (let xx = x; xx < ex; xx++) {
                     let j = (rw + xx) * 4;
-                    p[j] = r; p[j + 1] = g; p[j + 2] = bl;
-                }
-            }
-        }
-    }
-
-    // Passo 2: edge detection su griglia campionata -> contorni neri spessi e stabili
-    const threshold = 42;
-    for (let gy = 0; gy < rows; gy++) {
-        for (let gx = 0; gx < cols; gx++) {
-            let base = comicLum[gy * cols + gx];
-            let right = (gx + 1 < cols) ? comicLum[gy * cols + (gx + 1)] : base;
-            let below = (gy + 1 < rows) ? comicLum[(gy + 1) * cols + gx] : base;
-            if (Math.abs(base - right) > threshold || Math.abs(base - below) > threshold) {
-                let x = b.x1 + gx * step;
-                let y = b.y1 + gy * step;
-                let ex = Math.min(x + step, b.x2);
-                let ey = Math.min(y + step, b.y2);
-                for (let yy = y; yy < ey; yy++) {
-                    let rw = yy * width;
-                    for (let xx = x; xx < ex; xx++) {
-                        let j = (rw + xx) * 4;
-                        p[j] = 20; p[j + 1] = 18; p[j + 2] = 16;
-                    }
+                    p[j] = col[0]; p[j + 1] = col[1]; p[j + 2] = col[2];
                 }
             }
         }
