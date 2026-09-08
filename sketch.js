@@ -144,10 +144,11 @@ function loadHandModel() {
         // Non blocchiamo la webcam
     }
 
-    // Se il modello non carica entro 90 secondi, lo segnaliamo
+    // Se il modello non carica entro 90 secondi, lo segnaliamo e togliamo l'overlay
     setTimeout(() => {
         if (!modelReady) {
             showError('Il modello AI non si è caricato. Controlla la connessione internet o riprova. La webcam resta attiva ma senza riconoscimento mani.');
+            setBusy('', true);
         }
     }, 90000);
 }
