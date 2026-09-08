@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hand Filter - Finestra Magica</title>
+    <script src="https://cdn.jsdelivr.net/npm/p5@1.9.1/lib/p5.js"></script>
+    <script src="https://unpkg.com/ml5@1/dist/ml5.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #111;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        canvas { display: block; }
+        #busy {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff;
+            font-size: 18px;
+            background: rgba(0,0,0,0.85);
+            padding: 20px 30px;
+            border-radius: 10px;
+            border: 1px solid #333;
+            z-index: 10;
+        }
+        #busy .spin {
+            display: inline-block;
+            width: 18px; height: 18px;
+            border: 3px solid #888;
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: rot 0.8s linear infinite;
+            vertical-align: middle;
+            margin-right: 10px;
+        }
+        @keyframes rot { to { transform: rotate(360deg); } }
+        #errBox {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            color: #ff6b6b;
+            font-family: Consolas, monospace;
+            font-size: 13px;
+            background: rgba(0,0,0,0.9);
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 1px solid #ff4444;
+            white-space: pre-wrap;
+            z-index: 20;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="busy"><span class="spin"></span><span id="busyText">Caricamento...</span></div>
+    <div id="errBox"></div>
+    <script src="sketch.js"></script>
+</body>
+</html>
