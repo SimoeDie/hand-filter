@@ -819,7 +819,7 @@ async function toggleRecording() {
     recorder.start();
     isRecording = true;
 
-    recordBtnEl.textContent = '⬛ Stop';
+    recordBtnEl.textContent = 'STOP';
     recordBtnEl.classList.add('rec');
     setBusy('Registrazione in corso...');
 }
@@ -830,7 +830,7 @@ function stopRecording() {
 
 async function onRecordingFinished() {
     isRecording = false;
-    recordBtnEl.textContent = '● Registra';
+    recordBtnEl.textContent = 'REC';
     recordBtnEl.classList.remove('rec');
     setBusy('', true);
 

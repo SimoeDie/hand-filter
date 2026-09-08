@@ -64,18 +64,21 @@
         #installBtn:hover { background: #1fb25f; }
         #recordBtn {
             position: fixed;
-            bottom: 20px;
-            right: 20px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
             background: #e5484d;
             color: #fff;
             border: none;
-            padding: 14px 18px;
-            border-radius: 50px;
-            font-size: 15px;
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            font-size: 14px;
             font-weight: 700;
             cursor: pointer;
             z-index: 30;
             box-shadow: 0 4px 14px rgba(0,0,0,0.5);
+            border: 4px solid rgba(255,255,255,0.85);
         }
         #recordBtn.rec { background: #7a1013; }
         #recordBtn:hover { background: #c13338; }
@@ -102,7 +105,7 @@
     <div id="busy"><span class="spin"></span><span id="busyText">Caricamento...</span></div>
     <div id="errBox"></div>
     <button id="installBtn">Installa App</button>
-    <button id="recordBtn">● Registra</button>
+    <button id="recordBtn">REC</button>
     <script src="sketch.js"></script>
     <script>
         if ('serviceWorker' in navigator) {
