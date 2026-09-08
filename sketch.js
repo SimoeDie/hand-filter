@@ -122,6 +122,8 @@ function setup() {
     setupPixelGrid();
     setupMatrix();
     setupWaves();
+
+    setupRecording();
 }
 
 function loadHandModel() {
@@ -773,4 +775,94 @@ function drawHUD() {
     textAlign(RIGHT, CENTER);
     textSize(11);
     text("🤏 Pollice+Mignolo = cambia effetto", width - 20, 107);
+}
+
+// ---------------- REGISTRAZIONE VIDEO ----------------
+let recorder = null;
+let recordingChunks = [];
+let isRecording = false;
+let recordBtnEl = null;
+
+function setupRecording() {
+    recordBtnEl = document.getElementById('recordBtn');
+    if (!recordBtnEl) return;
+    recordBtnEl.addEventListener('click', toggleRecording);
+}
+
+// Usa il canvas p5 come sorgente: registra esattamente ciò che vedi
+async function toggleRecording() {
+    if (!recordBtnEl) return;
+
+    if (isRecording) {
+        stopRecording();
+        return;
+    }
+
+    // Cattura lo stream direttamente dal canvas p5
+    const stream = canvas.captureStream(30);
+    const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+        ? 'video/webm;codecs=vp9'
+        : (MediaRecorder.isTypeSupported('video/webm') ? 'video/webm' : '');
+
+    try {
+        recorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+    } catch (err) {
+        showError('Registrazione non supportata: ' + err.message);
+        return;
+    }
+
+    recordingChunks = [];
+    recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) recordingChunks.push(e.data);
+    };
+    recorder.onstop = onRecordingFinished;
+    recorder.start();
+    isRecording = true;
+
+    recordBtnEl.textContent = '⬛ Stop';
+    recordBtnEl.classList.add('rec');
+    setBusy('Registrazione in corso...');
+}
+
+function stopRecording() {
+    if (recorder && recorder.state !== 'inactive') recorder.stop();
+}
+
+async function onRecordingFinished() {
+    isRecording = false;
+    recordBtnEl.textContent = '● Registra';
+    recordBtnEl.classList.remove('rec');
+    setBusy('', true);
+
+    const type = recorder && recorder.mimeType ? recorder.mimeType : 'video/webm';
+    const blob = new Blob(recordingChunks, { type: type });
+    if (blob.size === 0) {
+        showError('Registrazione vuota: nessun dato catturato.');
+        return;
+    }
+
+    const fileName = 'hand-filter-' + Date.now() + '.webm';
+    const file = new File([blob], fileName, { type: type });
+
+    // Su mobile preferiamo il Web Share per salvare direttamente nella galleria
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+            await navigator.share({ files: [file], title: 'Hand Filter Video' });
+            return;
+        } catch (err) {
+            if (err.name === 'AbortError') return; // utente ha annullato
+            // altrimenti cadiamo nel download
+        }
+    }
+
+    // Fallback: download classico
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    setBusy('Video salvato!', true);
 }
