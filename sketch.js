@@ -16,6 +16,7 @@
 //   6. Psichedelico
 //   7. Fluido (onde)
 //   8. Matrix (pioggia verde)
+//   9. Fumetto (stile vignetta: colori piatti + contorno)
 // ============================================================
 
 let handPose;
@@ -63,7 +64,8 @@ let effectNames = [
     "Glitch",
     "Psichedelico",
     "Fluido",
-    "Matrix"
+    "Matrix",
+    "Fumetto"
 ];
 let switchCooldown = 0;        // evita cambi rapidi/accidentali
 let pinchStartTime = 0;
@@ -372,6 +374,9 @@ function drawFilteredVideo() {
         case 7: // Matrix
             applyMatrixEffect();
             break;
+        case 8: // Fumetto
+            applyComicEffect();
+            break;
     }
 }
 
@@ -594,6 +599,64 @@ function applyMatrixEffect() {
     // Sfuma leggermente per creare la scia
     filterBuffer.fill(0, 60);
     filterBuffer.rect(0, 0, width, height);
+}
+
+function applyComicEffect() {
+    // Effetto fumetto: colori piatti posterizzati + contorno scuro (stile vignetta)
+    let b = windowBounds();
+    if (!b) return;
+    let w = b.x2 - b.x1;
+    let h = b.y2 - b.y1;
+    if (w < 4 || h < 4) return;
+
+    filterBuffer.loadPixels();
+    let p = filterBuffer.pixels;
+
+    // Passo 1: posterizza i colori e aumenta la saturazione, salva la luminosità
+    const levels = 4;
+    const q = 255 / levels;
+    const sat = 1.35;
+    let lum = new Float32Array(w * h);
+
+    for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+            let i = (y * width + (x + b.x1)) * 4;
+            let r = p[i], g = p[i + 1], bl = p[i + 2];
+            // posterizza per canale
+            r = Math.round(Math.round(r / q) * q);
+            g = Math.round(Math.round(g / q) * q);
+            bl = Math.round(Math.round(bl / q) * q);
+            // saturazione
+            let luma = 0.299 * r + 0.587 * g + 0.114 * bl;
+            r = luma + (r - luma) * sat;
+            g = luma + (g - luma) * sat;
+            bl = luma + (bl - luma) * sat;
+            r = min(255, max(0, r));
+            g = min(255, max(0, g));
+            bl = min(255, max(0, bl));
+            p[i] = r;
+            p[i + 1] = g;
+            p[i + 2] = bl;
+            lum[y * w + x] = 0.299 * r + 0.587 * g + 0.114 * bl;
+        }
+    }
+
+    // Passo 2: traccia i bordi (dove la luminosità cambia) in nero
+    const threshold = 38;
+    for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+            let base = lum[y * w + x];
+            let right = (x + 1 < w) ? lum[y * w + (x + 1)] : base;
+            let below = (y + 1 < h) ? lum[(y + 1) * w + x] : base;
+            if (Math.abs(base - right) > threshold || Math.abs(base - below) > threshold) {
+                let i = (y * width + (x + b.x1)) * 4;
+                p[i] = 20;
+                p[i + 1] = 18;
+                p[i + 2] = 16;
+            }
+        }
+    }
+    filterBuffer.updatePixels();
 }
 
 // ---------------- CORNICE / CONTORNO DELLA FINESTRA ----------------
