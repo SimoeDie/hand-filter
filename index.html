@@ -45,6 +45,23 @@
             margin-right: 10px;
         }
         @keyframes rot { to { transform: rotate(360deg); } }
+        #installBtn {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            background: #28c76f;
+            color: #fff;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: none;
+            z-index: 30;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+        }
+        #installBtn:hover { background: #1fb25f; }
         #errBox {
             position: fixed;
             bottom: 20px;
@@ -66,6 +83,7 @@
 <body>
     <div id="busy"><span class="spin"></span><span id="busyText">Caricamento...</span></div>
     <div id="errBox"></div>
+    <button id="installBtn">Installa App</button>
     <script src="sketch.js"></script>
     <script>
         if ('serviceWorker' in navigator) {
@@ -73,6 +91,25 @@
                 navigator.serviceWorker.register('sw.js').catch((err) => console.error('SW register failed:', err));
             });
         }
+
+        let deferredPrompt = null;
+        const installBtn = document.getElementById('installBtn');
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installBtn.style.display = 'block';
+        });
+        installBtn.addEventListener('click', async () => {
+            if (!deferredPrompt) return;
+            deferredPrompt.prompt();
+            await deferredPrompt.userChoice;
+            deferredPrompt = null;
+            installBtn.style.display = 'none';
+        });
+        window.addEventListener('appinstalled', () => {
+            deferredPrompt = null;
+            installBtn.style.display = 'none';
+        });
     </script>
 </body>
 </html>
