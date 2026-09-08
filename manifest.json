@@ -1,0 +1,19 @@
+{
+  "name": "Hand Filter - Finestra Magica",
+  "short_name": "Hand Filter",
+  "description": "Filtro webcam interattivo con riconoscimento mani (ml5.js + p5.js)",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "background_color": "#111111",
+  "theme_color": "#111111",
+  "orientation": "landscape",
+  "icons": [
+    {
+      "src": "./icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
