@@ -24,6 +24,7 @@ let video;
 let hands = [];
 let filterBuffer;      // buffer dove disegno il video con l'effetto
 let filterObjs = [];   // oggetti per alcuni effetti (pixel, matrix, onde)
+let comicLum = null;   // buffer di luminosità riutilizzato dall'effetto Fumetto
 let modelReady = false;
 let modelError = null;
 
@@ -606,56 +607,74 @@ function applyMatrixEffect() {
 
 function applyComicEffect() {
     // Effetto fumetto: colori piatti posterizzati + contorno scuro (stile vignetta)
+    // Elabora su una griglia campionata (passo 3 -> ~9x più veloce e contorni
+    // spessi e stabili, meno 'scintillio' dal rumore della webcam).
     let b = windowBounds();
     if (!b) return;
     let w = b.x2 - b.x1;
     let h = b.y2 - b.y1;
-    if (w < 4 || h < 4) return;
+    if (w < 8 || h < 8) return;
 
+    const step = 3;
+    const cols = Math.ceil(w / step);
+    const rows = Math.ceil(h / step);
+    if (!comicLum || comicLum.length < cols * rows) {
+        comicLum = new Float32Array(cols * rows);
+    }
+
+    // Passo 1: posterizza i colori e aumenta la saturazione
+    // (solo sui pixel campionati, poi diffonde il colore al blocco)
+    const q = 32;
+    const sat = 1.3;
     filterBuffer.loadPixels();
     let p = filterBuffer.pixels;
-
-    // Passo 1: posterizza i colori e aumenta la saturazione, salva la luminosità
-    const levels = 4;
-    const q = 255 / levels;
-    const sat = 1.35;
-    let lum = new Float32Array(w * h);
-
-    for (let y = 0; y < h; y++) {
-        for (let x = 0; x < w; x++) {
-            let i = (y * width + (x + b.x1)) * 4;
+    for (let gy = 0; gy < rows; gy++) {
+        let y = b.y1 + gy * step;
+        if (y >= b.y2) break;
+        let ey = Math.min(y + step, b.y2);
+        for (let gx = 0; gx < cols; gx++) {
+            let x = b.x1 + gx * step;
+            if (x >= b.x2) break;
+            let ex = Math.min(x + step, b.x2);
+            let i = (y * width + x) * 4;
             let r = p[i], g = p[i + 1], bl = p[i + 2];
-            // posterizza per canale
-            r = Math.round(Math.round(r / q) * q);
-            g = Math.round(Math.round(g / q) * q);
-            bl = Math.round(Math.round(bl / q) * q);
-            // saturazione
+            r = Math.round(r / q) * q;
+            g = Math.round(g / q) * q;
+            bl = Math.round(bl / q) * q;
             let luma = 0.299 * r + 0.587 * g + 0.114 * bl;
-            r = luma + (r - luma) * sat;
-            g = luma + (g - luma) * sat;
-            bl = luma + (bl - luma) * sat;
-            r = min(255, max(0, r));
-            g = min(255, max(0, g));
-            bl = min(255, max(0, bl));
-            p[i] = r;
-            p[i + 1] = g;
-            p[i + 2] = bl;
-            lum[y * w + x] = 0.299 * r + 0.587 * g + 0.114 * bl;
+            r = Math.min(255, luma + (r - luma) * sat);
+            g = Math.min(255, luma + (g - luma) * sat);
+            bl = Math.min(255, luma + (bl - luma) * sat);
+            comicLum[gy * cols + gx] = luma;
+            for (let yy = y; yy < ey; yy++) {
+                let rw = yy * width;
+                for (let xx = x; xx < ex; xx++) {
+                    let j = (rw + xx) * 4;
+                    p[j] = r; p[j + 1] = g; p[j + 2] = bl;
+                }
+            }
         }
     }
 
-    // Passo 2: traccia i bordi (dove la luminosità cambia) in nero
-    const threshold = 38;
-    for (let y = 0; y < h; y++) {
-        for (let x = 0; x < w; x++) {
-            let base = lum[y * w + x];
-            let right = (x + 1 < w) ? lum[y * w + (x + 1)] : base;
-            let below = (y + 1 < h) ? lum[(y + 1) * w + x] : base;
+    // Passo 2: edge detection su griglia campionata -> contorni neri spessi e stabili
+    const threshold = 42;
+    for (let gy = 0; gy < rows; gy++) {
+        for (let gx = 0; gx < cols; gx++) {
+            let base = comicLum[gy * cols + gx];
+            let right = (gx + 1 < cols) ? comicLum[gy * cols + (gx + 1)] : base;
+            let below = (gy + 1 < rows) ? comicLum[(gy + 1) * cols + gx] : base;
             if (Math.abs(base - right) > threshold || Math.abs(base - below) > threshold) {
-                let i = (y * width + (x + b.x1)) * 4;
-                p[i] = 20;
-                p[i + 1] = 18;
-                p[i + 2] = 16;
+                let x = b.x1 + gx * step;
+                let y = b.y1 + gy * step;
+                let ex = Math.min(x + step, b.x2);
+                let ey = Math.min(y + step, b.y2);
+                for (let yy = y; yy < ey; yy++) {
+                    let rw = yy * width;
+                    for (let xx = x; xx < ex; xx++) {
+                        let j = (rw + xx) * 4;
+                        p[j] = 20; p[j + 1] = 18; p[j + 2] = 16;
+                    }
+                }
             }
         }
     }
