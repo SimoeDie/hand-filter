@@ -72,6 +72,7 @@ let pinchStartTime = 0;
 let pinchTriggered = false;
 let lastPinchPos = null;
 let lastTapTime = -99;         // frame dell'ultimo tap (per il doppio tap indietro)
+let pendingEffect = null;      // direzione da applicare dopo la finestra del doppio tap
 
 // Cornice decorativa per effetto "Decorativo" richiesto
 let decorativeFrame = 0;       // 0=nessuna, 1=fuoco, 2=ghiaccio, 3=fiori
@@ -327,28 +328,33 @@ function handleGestures() {
             }
         } else {
             if (pinchTriggered) {
-                // Quando si 'rilascia' il gesto, cambia effetto
+                // Quando si 'rilascia' il gesto, segna un tap
                 // Tempo di contatto minimo per evitare accidentali
                 if (frameTimer - pinchStartTime >= 8 && switchCooldown === 0) {
-                    // Doppio tap (entro ~500ms a 60fps) -> vai INDIETRO
-                    if (frameTimer - lastTapTime <= 30) {
-                        currentEffect = (currentEffect - 1 + effectNames.length) % effectNames.length;
+                    // Doppio tap (entro ~45 frame a 60fps) -> vai INDIETRO
+                    if (frameTimer - lastTapTime <= 45) {
+                        pendingEffect = -1;
                         lastTapTime = -99;
                     } else {
-                        // Tap singolo -> vai AVANTI
-                        currentEffect = (currentEffect + 1) % effectNames.length;
+                        // Tap singolo -> attende la finestra poi va AVANTI
+                        pendingEffect = 1;
                         lastTapTime = frameTimer;
                     }
-                    // Se siamo di nuovo al primo, cambiamo anche cornice decorativa
-                    if (currentEffect === 0) {
-                        decorativeFrame = (decorativeFrame + 1) % 4;
-                    }
-                    switchCooldown = 30; // cooldown
+                    switchCooldown = 15; // cooldown ridotto per permettere il doppio tap
                 }
                 pinchTriggered = false;
                 lastPinchPos = null;
             }
         }
+    }
+
+    // Applica l'effetto quando la finestra del doppio tap è scaduta (~45 frame)
+    if (pendingEffect !== null && frameTimer - lastTapTime > 45) {
+        currentEffect = (currentEffect + pendingEffect + effectNames.length) % effectNames.length;
+        if (currentEffect === 0) {
+            decorativeFrame = (decorativeFrame + 1) % 4;
+        }
+        pendingEffect = null;
     }
 }
 
