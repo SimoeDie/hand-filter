@@ -71,6 +71,7 @@ let switchCooldown = 0;        // evita cambi rapidi/accidentali
 let pinchStartTime = 0;
 let pinchTriggered = false;
 let lastPinchPos = null;
+let lastTapTime = -99;         // frame dell'ultimo tap (per il doppio tap indietro)
 
 // Cornice decorativa per effetto "Decorativo" richiesto
 let decorativeFrame = 0;       // 0=nessuna, 1=fuoco, 2=ghiaccio, 3=fiori
@@ -329,7 +330,15 @@ function handleGestures() {
                 // Quando si 'rilascia' il gesto, cambia effetto
                 // Tempo di contatto minimo per evitare accidentali
                 if (frameTimer - pinchStartTime >= 8 && switchCooldown === 0) {
-                    currentEffect = (currentEffect + 1) % effectNames.length;
+                    // Doppio tap (entro ~500ms a 60fps) -> vai INDIETRO
+                    if (frameTimer - lastTapTime <= 30) {
+                        currentEffect = (currentEffect - 1 + effectNames.length) % effectNames.length;
+                        lastTapTime = -99;
+                    } else {
+                        // Tap singolo -> vai AVANTI
+                        currentEffect = (currentEffect + 1) % effectNames.length;
+                        lastTapTime = frameTimer;
+                    }
                     // Se siamo di nuovo al primo, cambiamo anche cornice decorativa
                     if (currentEffect === 0) {
                         decorativeFrame = (decorativeFrame + 1) % 4;
