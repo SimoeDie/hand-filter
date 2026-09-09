@@ -267,70 +267,60 @@ function handleGestures() {
     switchCooldown = max(0, switchCooldown - 1);
     frameTimer++;
 
+    // ---------------- FINESTRA MAGICA: richiede due mani ----------------
     if (hands.length < 2) {
-        // Meno di due mani -> finestra non attiva
         windowActive = false;
         currentFrame = null;
-        pinchTriggered = false;
-        return;
-    }
-
-    let handA = hands[0];
-    let handB = hands[1];
-
-    // Pollice e indice di entrambe le mani
-    let point = (hand, key) => {
-        let k = hand.keypoints[key];
-        return { x: k.x, y: k.y };
-    };
-
-    let AThumb = point(handA, KP.thumbTip);
-    let AIndex = point(handA, KP.indexTip);
-    let BThumb = point(handB, KP.thumbTip);
-    let BIndex = point(handB, KP.indexTip);
-
-    // GESTO 1: Pollice+Indice di entrambe le mani -> finestra di forma libera
-    // I 4 vertici del quadrilatero sono: pollice A, indice A, pollice B, indice B
-    let cornerPoints = [AThumb, AIndex, BThumb, BIndex];
-    let orderedPts = orderQuadPoints(cornerPoints);
-
-    // Limiti (bounding box) per comodità
-    let allX = cornerPoints.map(p => p.x);
-    let allY = cornerPoints.map(p => p.y);
-    let x1 = Math.min(...allX);
-    let y1 = Math.min(...allY);
-    let x2 = Math.max(...allX);
-    let y2 = Math.max(...allY);
-
-    // Apri/chiudi: se la distanza pollice-indice e' grande (mano aperta) la finestra opera
-    let distA = dist(AThumb.x, AThumb.y, AIndex.x, AIndex.y);
-    let distB = dist(BThumb.x, BThumb.y, BIndex.x, BIndex.y);
-    let openThreshold = 45; // pixel
-
-    let handAOpen = distA > openThreshold;
-    let handBOpen = distB > openThreshold;
-
-    // Finestra attiva solo se entrambe le mani sono aperte e creano un'area ragionevole
-    let area = polygonArea(orderedPts);
-    windowActive = handAOpen && handBOpen && area > 4000;
-
-    if (windowActive) {
-        currentFrame = { pts: orderedPts, x1, y1, x2, y2, area };
     } else {
-        currentFrame = null;
+        let handA = hands[0];
+        let handB = hands[1];
+
+        // Pollice e indice di entrambe le mani
+        let point = (hand, key) => {
+            let k = hand.keypoints[key];
+            return { x: k.x, y: k.y };
+        };
+
+        let AThumb = point(handA, KP.thumbTip);
+        let AIndex = point(handA, KP.indexTip);
+        let BThumb = point(handB, KP.thumbTip);
+        let BIndex = point(handB, KP.indexTip);
+
+        // GESTO 1: Pollice+Indice di entrambe le mani -> finestra di forma libera
+        let cornerPoints = [AThumb, AIndex, BThumb, BIndex];
+        let orderedPts = orderQuadPoints(cornerPoints);
+
+        let allX = cornerPoints.map(p => p.x);
+        let allY = cornerPoints.map(p => p.y);
+        let x1 = Math.min(...allX);
+        let y1 = Math.min(...allY);
+        let x2 = Math.max(...allX);
+        let y2 = Math.max(...allY);
+
+        let distA = dist(AThumb.x, AThumb.y, AIndex.x, AIndex.y);
+        let distB = dist(BThumb.x, BThumb.y, BIndex.x, BIndex.y);
+        let openThreshold = 45;
+
+        let handAOpen = distA > openThreshold;
+        let handBOpen = distB > openThreshold;
+
+        let area = polygonArea(orderedPts);
+        windowActive = handAOpen && handBOpen && area > 4000;
+
+        if (windowActive) {
+            currentFrame = { pts: orderedPts, x1, y1, x2, y2, area };
+        } else {
+            currentFrame = null;
+        }
     }
 
-    // GESTO 2: Pollice+Mignolo -> cambia effetto
+    // ---------------- CAMBIO EFFETTO: funziona anche con una sola mano ----------------
     // Mano sinistra = avanti, mano destra = indietro
-    // Ogni mano tiene traccia del proprio gesto (niente rilascio spurio da
-    // un'altra mano aperta nello stesso frame).
     for (let h of hands) {
         let thisHand = getHandedness(h);
-        let t = point(h, KP.thumbTip);
-        let p = point(h, KP.pinkyTip);
+        let t = { x: h.keypoints[KP.thumbTip].x, y: h.keypoints[KP.thumbTip].y };
+        let p = { x: h.keypoints[KP.pinkyTip].x, y: h.keypoints[KP.pinkyTip].y };
         let d = dist(t.x, t.y, p.x, p.y);
-        // Il gesto pollice-mignolo: pollice e mignolo vicini
-        // (deve toccarsi), ma il resto della mano e' aperto
         if (d < 35) {
             if (!pinchTriggered && switchCooldown === 0) {
                 pinchStartTime = frameTimer;
@@ -339,16 +329,13 @@ function handleGestures() {
                 lastPinchPos = { x: t.x, y: t.y };
             }
         } else if (pinchTriggered && pinchHandId === thisHand) {
-            // Quando si 'rilascia' il gesto (stessa mano che l'ha iniziato)
             if (frameTimer - pinchStartTime >= 8 && switchCooldown === 0) {
-                // Mano sinistra -> avanti, mano destra -> indietro
                 let dir = (thisHand === "Left") ? 1 : -1;
                 currentEffect = (currentEffect + dir + effectNames.length) % effectNames.length;
-                // Se siamo di nuovo al primo, cambiamo anche cornice decorativa
                 if (currentEffect === 0) {
                     decorativeFrame = (decorativeFrame + 1) % 4;
                 }
-                switchCooldown = 30; // cooldown
+                switchCooldown = 30;
             }
             pinchTriggered = false;
             pinchHandId = null;

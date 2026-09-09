@@ -1,4 +1,4 @@
-const CACHE = 'hand-filter-v2';
+const CACHE = 'hand-filter-v3';
 const ASSETS = [
   './',
   './index.html',
