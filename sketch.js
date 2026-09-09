@@ -73,6 +73,15 @@ let pinchTriggered = false;
 let lastPinchPos = null;
 let pinchHandId = null;        // identità della mano che sta facendo il gesto ("Left"/"Right")
 
+// Estrae "Left" o "Right" da handedness (ml5 può restituire stringa, array o oggetto)
+function getHandedness(h) {
+    let hnd = h.handedness;
+    if (typeof hnd === "string") return hnd;
+    if (Array.isArray(hnd) && hnd[0] && typeof hnd[0].label === "string") return hnd[0].label;
+    if (hnd && typeof hnd.label === "string") return hnd.label;
+    return "Left";
+}
+
 // Cornice decorativa per effetto "Decorativo" richiesto
 let decorativeFrame = 0;       // 0=nessuna, 1=fuoco, 2=ghiaccio, 3=fiori
 let frameTimer = 0;
@@ -316,7 +325,7 @@ function handleGestures() {
     // Ogni mano tiene traccia del proprio gesto (niente rilascio spurio da
     // un'altra mano aperta nello stesso frame).
     for (let h of hands) {
-        let thisHand = h.handedness || "Left";
+        let thisHand = getHandedness(h);
         let t = point(h, KP.thumbTip);
         let p = point(h, KP.pinkyTip);
         let d = dist(t.x, t.y, p.x, p.y);
@@ -348,7 +357,7 @@ function handleGestures() {
     }
 
     // Se la mano che ha iniziato il gesto non è più in scena, azzera lo stato
-    if (pinchTriggered && !hands.some(h => (h.handedness || "Left") === pinchHandId)) {
+    if (pinchTriggered && !hands.some(h => getHandedness(h) === pinchHandId)) {
         pinchTriggered = false;
         pinchHandId = null;
         lastPinchPos = null;
