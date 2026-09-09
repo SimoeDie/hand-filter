@@ -71,7 +71,7 @@ let switchCooldown = 0;        // evita cambi rapidi/accidentali
 let pinchStartTime = 0;
 let pinchTriggered = false;
 let lastPinchPos = null;
-let lastTapHand = null;        // mano che ha avviato il gesto ("Left"/"Right")
+let pinchHandId = null;        // identità della mano che sta facendo il gesto ("Left"/"Right")
 
 // Cornice decorativa per effetto "Decorativo" richiesto
 let decorativeFrame = 0;       // 0=nessuna, 1=fuoco, 2=ghiaccio, 3=fiori
@@ -313,7 +313,10 @@ function handleGestures() {
 
     // GESTO 2: Pollice+Mignolo -> cambia effetto
     // Mano sinistra = avanti, mano destra = indietro
+    // Ogni mano tiene traccia del proprio gesto (niente rilascio spurio da
+    // un'altra mano aperta nello stesso frame).
     for (let h of hands) {
+        let thisHand = h.handedness || "Left";
         let t = point(h, KP.thumbTip);
         let p = point(h, KP.pinkyTip);
         let d = dist(t.x, t.y, p.x, p.y);
@@ -323,28 +326,32 @@ function handleGestures() {
             if (!pinchTriggered && switchCooldown === 0) {
                 pinchStartTime = frameTimer;
                 pinchTriggered = true;
+                pinchHandId = thisHand;
                 lastPinchPos = { x: t.x, y: t.y };
-                lastTapHand = h.handedness || "Left";
             }
-        } else {
-            if (pinchTriggered) {
-                // Quando si 'rilascia' il gesto, cambia effetto
-                // Tempo di contatto minimo per evitare accidentali
-                if (frameTimer - pinchStartTime >= 8 && switchCooldown === 0) {
-                    // Mano sinistra -> avanti, mano destra -> indietro
-                    let dir = (lastTapHand === "Left") ? 1 : -1;
-                    currentEffect = (currentEffect + dir + effectNames.length) % effectNames.length;
-                    // Se siamo di nuovo al primo, cambiamo anche cornice decorativa
-                    if (currentEffect === 0) {
-                        decorativeFrame = (decorativeFrame + 1) % 4;
-                    }
-                    switchCooldown = 30; // cooldown
+        } else if (pinchTriggered && pinchHandId === thisHand) {
+            // Quando si 'rilascia' il gesto (stessa mano che l'ha iniziato)
+            if (frameTimer - pinchStartTime >= 8 && switchCooldown === 0) {
+                // Mano sinistra -> avanti, mano destra -> indietro
+                let dir = (thisHand === "Left") ? 1 : -1;
+                currentEffect = (currentEffect + dir + effectNames.length) % effectNames.length;
+                // Se siamo di nuovo al primo, cambiamo anche cornice decorativa
+                if (currentEffect === 0) {
+                    decorativeFrame = (decorativeFrame + 1) % 4;
                 }
-                pinchTriggered = false;
-                lastPinchPos = null;
-                lastTapHand = null;
+                switchCooldown = 30; // cooldown
             }
+            pinchTriggered = false;
+            pinchHandId = null;
+            lastPinchPos = null;
         }
+    }
+
+    // Se la mano che ha iniziato il gesto non è più in scena, azzera lo stato
+    if (pinchTriggered && !hands.some(h => (h.handedness || "Left") === pinchHandId)) {
+        pinchTriggered = false;
+        pinchHandId = null;
+        lastPinchPos = null;
     }
 }
 
