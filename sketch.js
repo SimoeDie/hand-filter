@@ -5,9 +5,9 @@
 //  GESTI:
 //   - Pollice + Indice di entrambe le mani  -> crea la finestra (quadrilatero di forma libera)
 //   - Apri/chiudi mani                       -> attiva/disattiva la finestra
-//   - Pollice + Mignolo (una mano)           -> cambia l'effetto
+//   - Pollice + Mignolo (una mano)           -> cambia effetto (avanti/indietro)
 //
-//  EFFETTI (ciclo con pollice+mignolo):
+//  EFFETTI (ciclo con pollice+mignolo: mano sinistra=avanti, destra=indietro):
 //   1. Bianco & Nero
 //   2. Seppia
 //   3. Alto Contrasto
@@ -71,8 +71,7 @@ let switchCooldown = 0;        // evita cambi rapidi/accidentali
 let pinchStartTime = 0;
 let pinchTriggered = false;
 let lastPinchPos = null;
-let lastTapTime = -99;         // frame dell'ultimo tap (per il doppio tap indietro)
-let pendingEffect = null;      // direzione da applicare dopo la finestra del doppio tap
+let lastTapHand = null;        // mano che ha avviato il gesto ("Left"/"Right")
 
 // Cornice decorativa per effetto "Decorativo" richiesto
 let decorativeFrame = 0;       // 0=nessuna, 1=fuoco, 2=ghiaccio, 3=fiori
@@ -312,8 +311,8 @@ function handleGestures() {
         currentFrame = null;
     }
 
-    // GESTO 2: Pollice+Mignolo di QUALSIASI mano -> cambia effetto
-    // Controllo su entrambe le mani
+    // GESTO 2: Pollice+Mignolo -> cambia effetto
+    // Mano sinistra = avanti, mano destra = indietro
     for (let h of hands) {
         let t = point(h, KP.thumbTip);
         let p = point(h, KP.pinkyTip);
@@ -325,36 +324,27 @@ function handleGestures() {
                 pinchStartTime = frameTimer;
                 pinchTriggered = true;
                 lastPinchPos = { x: t.x, y: t.y };
+                lastTapHand = h.handedness || "Left";
             }
         } else {
             if (pinchTriggered) {
-                // Quando si 'rilascia' il gesto, segna un tap
+                // Quando si 'rilascia' il gesto, cambia effetto
                 // Tempo di contatto minimo per evitare accidentali
                 if (frameTimer - pinchStartTime >= 8 && switchCooldown === 0) {
-                    // Doppio tap (entro ~45 frame a 60fps) -> vai INDIETRO
-                    if (frameTimer - lastTapTime <= 45) {
-                        pendingEffect = -1;
-                        lastTapTime = -99;
-                    } else {
-                        // Tap singolo -> attende la finestra poi va AVANTI
-                        pendingEffect = 1;
-                        lastTapTime = frameTimer;
+                    // Mano sinistra -> avanti, mano destra -> indietro
+                    let dir = (lastTapHand === "Left") ? 1 : -1;
+                    currentEffect = (currentEffect + dir + effectNames.length) % effectNames.length;
+                    // Se siamo di nuovo al primo, cambiamo anche cornice decorativa
+                    if (currentEffect === 0) {
+                        decorativeFrame = (decorativeFrame + 1) % 4;
                     }
-                    switchCooldown = 15; // cooldown ridotto per permettere il doppio tap
+                    switchCooldown = 30; // cooldown
                 }
                 pinchTriggered = false;
                 lastPinchPos = null;
+                lastTapHand = null;
             }
         }
-    }
-
-    // Applica l'effetto quando la finestra del doppio tap è scaduta (~45 frame)
-    if (pendingEffect !== null && frameTimer - lastTapTime > 45) {
-        currentEffect = (currentEffect + pendingEffect + effectNames.length) % effectNames.length;
-        if (currentEffect === 0) {
-            decorativeFrame = (decorativeFrame + 1) % 4;
-        }
-        pendingEffect = null;
     }
 }
 
@@ -781,7 +771,7 @@ function drawHUD() {
     fill(180);
     textAlign(RIGHT, CENTER);
     textSize(11);
-    text("🤏 Pollice+Mignolo = cambia effetto", width - 20, 107);
+    text("🤏 Pollice+Mignolo: ma sinistra=avanti, ma destra=indietro", width - 20, 107);
 }
 
 // ---------------- REGISTRAZIONE VIDEO ----------------
