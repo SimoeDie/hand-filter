@@ -4,11 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hand Filter - Finestra Magica</title>
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#111111">
-    <link rel="icon" href="icon.png" type="image/png">
-    <script src="lib/p5.min.js"></script>
-    <script src="lib/ml5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/p5@1.9.1/lib/p5.js"></script>
+    <script src="https://unpkg.com/ml5@1/dist/ml5.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -45,64 +42,6 @@
             margin-right: 10px;
         }
         @keyframes rot { to { transform: rotate(360deg); } }
-        #installBtn {
-            position: fixed;
-            top: 16px;
-            left: 16px;
-            background: #28c76f;
-            color: #fff;
-            border: none;
-            padding: 10px 18px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            display: none;
-            z-index: 99999;
-            box-shadow: 0 4px 14px rgba(0,0,0,0.4);
-        }
-        #installBtn:hover { background: #1fb25f; }
-        #recordBtn {
-            position: fixed;
-            bottom: 24px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #e5484d;
-            color: #fff;
-            border: none;
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            font-size: 16px;
-            font-weight: 700;
-            cursor: pointer;
-            z-index: 99999;
-            box-shadow: 0 4px 20px rgba(229,72,77,0.6);
-            border: 4px solid rgba(255,255,255,0.85);
-            touch-action: manipulation;
-            -webkit-tap-highlight-color: transparent;
-            user-select: none;
-        }
-        #recordBtn.rec { background: #7a1013; }
-        #recordBtn:hover { background: #c13338; }
-        #recordBtn.rec:hover { background: #5c0c0e; }
-        #iosHint {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: #fff;
-            font-size: 15px;
-            background: rgba(0,0,0,0.88);
-            padding: 18px 24px;
-            border-radius: 10px;
-            border: 1px solid #444;
-            z-index: 100000;
-            text-align: center;
-            line-height: 1.6;
-            display: none;
-        }
-        #iosHint .arrow { font-size: 28px; }
         #errBox {
             position: fixed;
             bottom: 20px;
@@ -116,7 +55,7 @@
             border-radius: 8px;
             border: 1px solid #ff4444;
             white-space: pre-wrap;
-            z-index: 99999;
+            z-index: 20;
             display: none;
         }
     </style>
@@ -124,43 +63,6 @@
 <body>
     <div id="busy"><span class="spin"></span><span id="busyText">Caricamento...</span></div>
     <div id="errBox"></div>
-    <button id="installBtn">Installa App</button>
-    <button id="recordBtn">REC</button>
-    <div id="iosHint"><span class="arrow">⬆️</span><br>Tocca <b>Condividi</b> per<br>aggiungere alla schermata home</div>
     <script src="sketch.js"></script>
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js').catch((err) => console.error('SW register failed:', err));
-            });
-        }
-
-        let deferredPrompt = null;
-        const installBtn = document.getElementById('installBtn');
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            installBtn.style.display = 'block';
-        });
-        installBtn.addEventListener('click', async () => {
-            if (!deferredPrompt) return;
-            deferredPrompt.prompt();
-            await deferredPrompt.userChoice;
-            deferredPrompt = null;
-            installBtn.style.display = 'none';
-        });
-        window.addEventListener('appinstalled', () => {
-            deferredPrompt = null;
-            installBtn.style.display = 'none';
-        });
-
-        if (/iPhone|iPad|iPod/.test(navigator.userAgent) && !window.navigator.standalone) {
-            const hint = document.getElementById('iosHint');
-            if (hint) {
-                hint.style.display = 'block';
-                setTimeout(() => { hint.style.display = 'none'; }, 5000);
-            }
-        }
-    </script>
 </body>
 </html>
