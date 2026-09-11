@@ -25,8 +25,8 @@ let modelReady = false;
 
 let windowActive = false;
 let windowAlpha = 0;
-let currentRect = null;
-let smoothRect = null;
+let currentQuad = null;
+let smoothQuad = null;
 let bodyDetecting = false;
 
 let currentEffect = 0;
@@ -554,20 +554,60 @@ function handleGestures() {
     let BThumb = mapFromVideo(BThumbV.x, BThumbV.y);
     let BIndex = mapFromVideo(BIndexV.x, BIndexV.y);
 
-    let allX = [AThumb.x, AIndex.x, BThumb.x, BIndex.x];
-    let allY = [AThumb.y, AIndex.y, BThumb.y, BIndex.y];
-    let x1 = Math.min(...allX);
-    let y1 = Math.min(...allY);
-    let x2 = Math.max(...allX);
-    let y2 = Math.max(...allY);
-
+    let pts = windowQuadFromFingers(AThumb, AIndex, BThumb, BIndex);
     let distA = dist(AThumb.x, AThumb.y, AIndex.x, AIndex.y);
     let distB = dist(BThumb.x, BThumb.y, BIndex.x, BIndex.y);
     let openThreshold = 45 * coverTransform().scale;
-    let area = (x2 - x1) * (y2 - y1);
+    let area = quadArea(pts);
     windowActive = distA > openThreshold && distB > openThreshold && area > 4000;
 
-    if (windowActive) currentRect = { x1, y1, x2, y2 };
+    if (windowActive) currentQuad = pts;
+}
+
+function windowQuadFromFingers(aThumb, aIndex, bThumb, bIndex) {
+    let handA = { midX: (aThumb.x + aIndex.x) / 2, thumb: aThumb, index: aIndex };
+    let handB = { midX: (bThumb.x + bIndex.x) / 2, thumb: bThumb, index: bIndex };
+    let left = handA.midX <= handB.midX ? handA : handB;
+    let right = left === handA ? handB : handA;
+    function topBottom(hand) {
+        let indexUp = hand.index.y <= hand.thumb.y;
+        return {
+            top: indexUp ? hand.index : hand.thumb,
+            bottom: indexUp ? hand.thumb : hand.index
+        };
+    }
+    let L = topBottom(left);
+    let R = topBottom(right);
+    return [
+        { x: L.top.x, y: L.top.y },
+        { x: R.top.x, y: R.top.y },
+        { x: R.bottom.x, y: R.bottom.y },
+        { x: L.bottom.x, y: L.bottom.y }
+    ];
+}
+
+function quadArea(pts) {
+    let a = 0;
+    for (let i = 0; i < pts.length; i++) {
+        let p = pts[i];
+        let q = pts[(i + 1) % pts.length];
+        a += p.x * q.y - q.x * p.y;
+    }
+    return Math.abs(a) / 2;
+}
+
+function clipQuad(ctx, pts) {
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.closePath();
+    ctx.clip();
+}
+
+function strokeQuad(pts) {
+    beginShape();
+    for (let i = 0; i < pts.length; i++) vertex(pts[i].x, pts[i].y);
+    endShape(CLOSE);
 }
 
 function draw() {
@@ -581,18 +621,16 @@ function draw() {
         windowAlpha = lerp(windowAlpha, windowActive ? 1 : 0, 0.22);
         if (windowAlpha < 0.01) {
             windowAlpha = 0;
-            if (!windowActive) smoothRect = null;
+            if (!windowActive) smoothQuad = null;
         }
-        updateSmoothRect();
+        updateSmoothQuad();
 
-        if (windowAlpha > 0.01 && smoothRect && video) {
+        if (windowAlpha > 0.01 && smoothQuad && video) {
             drawFilteredVideo();
             tint(255, windowAlpha * 255);
             drawingContext.save();
             try {
-                drawingContext.beginPath();
-                drawingContext.rect(smoothRect.x1, smoothRect.y1, smoothRect.x2 - smoothRect.x1, smoothRect.y2 - smoothRect.y1);
-                drawingContext.clip();
+                clipQuad(drawingContext, smoothQuad);
                 drawCover(filterBuffer);
                 if (currentEffect === 6) {
                     drawRainFaces();
@@ -606,7 +644,7 @@ function draw() {
             noFill();
             stroke(255, windowAlpha * 255);
             strokeWeight(2);
-            rect(smoothRect.x1, smoothRect.y1, smoothRect.x2 - smoothRect.x1, smoothRect.y2 - smoothRect.y1);
+            strokeQuad(smoothQuad);
         }
 
         drawHands();
@@ -615,22 +653,17 @@ function draw() {
     }
 }
 
-function updateSmoothRect() {
-    if (!currentRect) return;
-    if (!smoothRect) {
-        smoothRect = {
-            x1: currentRect.x1,
-            y1: currentRect.y1,
-            x2: currentRect.x2,
-            y2: currentRect.y2
-        };
+function updateSmoothQuad() {
+    if (!currentQuad) return;
+    if (!smoothQuad) {
+        smoothQuad = currentQuad.map(function (p) { return { x: p.x, y: p.y }; });
         return;
     }
     let k = windowActive ? 0.38 : 0.2;
-    smoothRect.x1 = lerp(smoothRect.x1, currentRect.x1, k);
-    smoothRect.y1 = lerp(smoothRect.y1, currentRect.y1, k);
-    smoothRect.x2 = lerp(smoothRect.x2, currentRect.x2, k);
-    smoothRect.y2 = lerp(smoothRect.y2, currentRect.y2, k);
+    for (let i = 0; i < 4; i++) {
+        smoothQuad[i].x = lerp(smoothQuad[i].x, currentQuad[i].x, k);
+        smoothQuad[i].y = lerp(smoothQuad[i].y, currentQuad[i].y, k);
+    }
 }
 
 function drawPersonInFront() {
