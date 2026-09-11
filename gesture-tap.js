@@ -1,4 +1,4 @@
-// Cambio effetto: tap indice+mignolo sinistra = successivo, destra = precedente.
+// Cambio effetto: pollice (rosso) + mignolo (blu) si toccano. Sinistra = successivo, destra = precedente.
 (function (g) {
     function hypot(ax, ay, bx, by) {
         let dx = ax - bx;
@@ -25,18 +25,17 @@
 
     function pinchRatio(hand) {
         let kp = hand.keypoints;
-        if (!kp || !kp[8] || !kp[20]) return 99;
-        return hypot(kp[8].x, kp[8].y, kp[20].x, kp[20].y) / handScale(hand);
+        if (!kp || !kp[4] || !kp[20]) return 99;
+        return hypot(kp[4].x, kp[4].y, kp[20].x, kp[20].y) / handScale(hand);
     }
 
     function createEffectTapController(options) {
         options = options || {};
-        let pinchIn = options.pinchIn != null ? options.pinchIn : 0.72;
-        let pinchOut = options.pinchOut != null ? options.pinchOut : 0.98;
-        let onFrames = options.onFrames != null ? options.onFrames : 3;
-        let offFrames = options.offFrames != null ? options.offFrames : 4;
-        let minHoldMs = options.minHoldMs != null ? options.minHoldMs : 80;
-        let cooldownMs = options.cooldownMs != null ? options.cooldownMs : 320;
+        let pinchIn = options.pinchIn != null ? options.pinchIn : 0.88;
+        let pinchOut = options.pinchOut != null ? options.pinchOut : 1.05;
+        let onFrames = options.onFrames != null ? options.onFrames : 2;
+        let offFrames = options.offFrames != null ? options.offFrames : 3;
+        let cooldownMs = options.cooldownMs != null ? options.cooldownMs : 280;
         let setT = options.setTimeoutFn || function (fn, ms) { return setTimeout(fn, ms); };
         let clearT = options.clearTimeoutFn || function (id) { clearTimeout(id); };
 
@@ -126,18 +125,14 @@
                     down = true;
                     downAt = now;
                     activeKey = hit ? hit.key : activeKey;
+                    emitTap(now, cbs, activeKey);
                 }
             } else {
                 offCount += 1;
                 onCount = 0;
                 if (down && offCount >= offFrames) {
-                    let held = now - downAt;
-                    let releasedKey = activeKey;
                     down = false;
                     activeKey = null;
-                    if (held >= minHoldMs && now >= cooldownUntil) {
-                        emitTap(now, cbs, releasedKey);
-                    }
                 }
             }
 

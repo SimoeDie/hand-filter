@@ -6,7 +6,7 @@ function fakeHand(opts) {
     for (let i = 0; i < 21; i++) kp.push({ x: 0, y: 0 });
     kp[0] = { x: 0, y: 100 };
     kp[9] = { x: 0, y: 40 };
-    kp[8] = { x: opts.ix, y: opts.iy };
+    kp[4] = { x: opts.ix, y: opts.iy };
     kp[20] = { x: opts.px, y: opts.py };
     return { handedness: opts.id || "Left", keypoints: kp };
 }
@@ -71,10 +71,9 @@ next = 0; prev = 0;
     let ctl = makeCtl(clock);
     let c = cbs();
     frames(ctl, clock, pinchedHand("Left"), 6, c);
-    frames(ctl, clock, openHand("Left"), 6, c);
     clock.advance(50);
-    assert.strictEqual(next, 1, "left tap should go next once");
-    assert.strictEqual(prev, 0, "left tap should not go prev");
+    assert.strictEqual(next, 1, "left fingers touching should go next immediately");
+    assert.strictEqual(prev, 0, "left touch should not go prev");
 }
 
 next = 0; prev = 0;
@@ -83,10 +82,9 @@ next = 0; prev = 0;
     let ctl = makeCtl(clock);
     let c = cbs();
     frames(ctl, clock, pinchedHand("Right"), 6, c);
-    frames(ctl, clock, openHand("Right"), 6, c);
     clock.advance(50);
-    assert.strictEqual(prev, 1, "right tap should go prev");
-    assert.strictEqual(next, 0, "right tap should not go next");
+    assert.strictEqual(prev, 1, "right fingers touching should go prev immediately");
+    assert.strictEqual(next, 0, "right touch should not go next");
 }
 
 next = 0; prev = 0;
@@ -97,10 +95,9 @@ next = 0; prev = 0;
     frames(ctl, clock, pinchedHand("Left"), 6, c);
     frames(ctl, clock, openHand("Left"), 6, c);
     frames(ctl, clock, pinchedHand("Left"), 6, c);
-    frames(ctl, clock, openHand("Left"), 6, c);
     clock.advance(50);
-    assert.strictEqual(next, 1, "second left tap inside cooldown should not fire again");
-    assert.strictEqual(prev, 0, "two left taps must not go prev");
+    assert.strictEqual(next, 1, "second left touch inside cooldown should not fire again");
+    assert.strictEqual(prev, 0, "two left touches must not go prev");
 }
 
 next = 0; prev = 0;
@@ -119,10 +116,10 @@ next = 0; prev = 0;
     let clock = makeClock();
     let ctl = makeCtl(clock);
     let c = cbs();
-    frames(ctl, clock, pinchedHand("Left"), 6, c);
+    frames(ctl, clock, pinchedHand("Left"), 1, c);
     frames(ctl, clock, null, 6, c);
     clock.advance(50);
-    assert.strictEqual(next + prev, 0, "losing the hand mid-pinch must not fire");
+    assert.strictEqual(next + prev, 0, "losing the hand before a stable touch must not fire");
 }
 
 next = 0; prev = 0;

@@ -116,16 +116,87 @@
             position: absolute;
             inset: 0;
             z-index: 6;
-            background: #1a1a1a;
+            background: #9bbc0f;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
+            gap: 10px;
+            padding: 18px 16px 22px;
+        }
+        #startOverlay::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            background: repeating-linear-gradient(
+                to bottom,
+                rgba(15, 56, 15, 0.12) 0 1px,
+                transparent 1px 3px
+            );
+            z-index: 3;
+        }
+        #gbaLogo {
+            position: relative;
+            z-index: 2;
+            width: min(72%, 420px);
+            height: auto;
+            display: block;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            flex-shrink: 0;
+            margin-bottom: 4px;
+        }
+        .gba-sub {
+            position: relative;
+            z-index: 2;
+            margin: 8px 0 4px;
+            width: min(58%, 300px);
+            height: auto;
+            display: block;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            flex-shrink: 0;
         }
         #scenes {
             position: relative;
-            width: min(86%, 560px);
-            height: min(58%, 360px);
+            z-index: 2;
+            width: min(86%, 520px);
+            height: min(52%, 300px);
+            flex: 1;
+            min-height: 140px;
+        }
+        .gba-press {
+            position: relative;
+            z-index: 2;
+            font-family: "Courier New", Courier, ui-monospace, monospace;
+            font-size: 11px;
+            letter-spacing: 0.28em;
+            color: #0f380f;
+            text-align: center;
+            animation: blinkStart 1.2s steps(2, end) infinite;
+            flex-shrink: 0;
+        }
+        #btnStart {
+            position: relative;
+            z-index: 2;
+            transform: none;
+            background: #0f380f;
+            color: #9bbc0f;
+            border: 3px solid #0f380f;
+            padding: 10px 28px;
+            border-radius: 4px;
+            font-family: "Courier New", Courier, ui-monospace, monospace;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            box-shadow: 3px 3px 0 #306230;
+            flex-shrink: 0;
+        }
+        #btnStart:active {
+            transform: translate(2px, 2px);
+            box-shadow: 1px 1px 0 #306230;
         }
         .scene {
             position: absolute;
@@ -133,11 +204,11 @@
         }
         .scene.a {
             opacity: 1;
-            animation: sceneA 5.2s ease-in-out infinite;
+            animation: sceneA 5.2s steps(4, end) infinite;
         }
         .scene.b {
             opacity: 0;
-            animation: sceneB 5.2s ease-in-out infinite;
+            animation: sceneB 5.2s steps(4, end) infinite;
         }
         @keyframes sceneA {
             0%, 42% { opacity: 1; }
@@ -154,19 +225,64 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
+            padding: 8px 10px;
         }
         .hand {
-            width: 110px;
-            height: 148px;
+            width: 118px;
+            height: auto;
+            overflow: visible;
+            position: relative;
         }
-        .scene.a .hand.left { animation: spreadL 2.6s ease-in-out infinite; }
-        .scene.a .hand.right { animation: spreadR 2.6s ease-in-out infinite; }
+        .hand img, .pinch-hand img {
+            width: 100%;
+            height: auto;
+            display: block;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+        .hand.left img { transform: scaleX(-1); }
+        .pinch-hand {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 148px;
+            transform: translate(-50%, -54%);
+            overflow: visible;
+        }
+        .pix {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            pointer-events: none;
+        }
+        .pix.thumb-tip {
+            left: 18%;
+            top: 46%;
+            background: #c42b2b;
+            animation: pinchThumb 1.4s steps(3, end) infinite;
+        }
+        .pix.pinky-tip {
+            left: 74%;
+            top: 30%;
+            background: #2458c4;
+            animation: pinchPinky 1.4s steps(3, end) infinite;
+        }
+        @keyframes pinchThumb {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(10px, 4px); }
+        }
+        @keyframes pinchPinky {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(-12px, 6px); }
+        }
+        .scene.a .hand.left { animation: spreadL 2.6s steps(3, end) infinite; }
+        .scene.a .hand.right { animation: spreadR 2.6s steps(3, end) infinite; }
         @keyframes spreadL {
-            0%, 100% { transform: translateX(28px); }
+            0%, 100% { transform: translateX(22px); }
             50% { transform: translateX(0); }
         }
         @keyframes spreadR {
-            0%, 100% { transform: translateX(-28px); }
+            0%, 100% { transform: translateX(-22px); }
             50% { transform: translateX(0); }
         }
         .dash-rect {
@@ -176,35 +292,27 @@
             width: 38%;
             height: 52%;
             transform: translate(-50%, -50%) scale(0.55);
-            border: 2px dashed #fff;
-            border-radius: 6px;
+            border: 3px dashed #0f380f;
+            border-radius: 2px;
             opacity: 0.35;
-            animation: dashGrow 2.6s ease-in-out infinite;
+            animation: dashGrow 2.6s steps(4, end) infinite;
         }
         @keyframes dashGrow {
             0%, 12% { opacity: 0.25; transform: translate(-50%, -50%) scale(0.5); }
             45%, 70% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
             100% { opacity: 0.2; transform: translate(-50%, -50%) scale(1.05); }
         }
-        .pinch-hand {
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            width: 120px;
-            height: 140px;
-            transform: translate(-50%, -52%);
-        }
         .tap-ring {
             position: absolute;
             left: 50%;
-            top: 38%;
-            width: 18px;
-            height: 18px;
-            margin-left: -9px;
-            border: 2px solid #fff;
-            border-radius: 50%;
+            top: 48%;
+            width: 22px;
+            height: 22px;
+            margin-left: -11px;
+            border: 3px solid #0f380f;
+            border-radius: 0;
             opacity: 0;
-            animation: tapPulse 2.6s ease-out infinite;
+            animation: tapPulse 2.6s steps(3, end) infinite;
         }
         .tap-ring.two { animation-delay: 0.85s; }
         @keyframes tapPulse {
@@ -212,18 +320,9 @@
             28% { opacity: 1; transform: scale(1); }
             55%, 100% { opacity: 0; transform: scale(1.8); }
         }
-        #btnStart {
-            position: absolute;
-            bottom: 28px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #fff;
-            color: #000;
-            border: none;
-            padding: 12px 40px;
-            border-radius: 999px;
-            font-size: 17px;
-            font-weight: 600;
+        @keyframes blinkStart {
+            0%, 49% { opacity: 1; }
+            50%, 100% { opacity: 0; }
         }
 
         #busy {
@@ -275,30 +374,28 @@
         <div id="topBar"><span id="filterName"></span></div>
         <div id="view">
             <div id="startOverlay">
-                <div id="scenes">
+                    <img id="gbaLogo" src="workshok-logo-px.png?v=27" alt="workshok">
+                        <div id="scenes">
                     <div class="scene a">
                         <div class="dash-rect"></div>
                         <div class="hands-row">
-                            <svg class="hand left" viewBox="0 0 72 96" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round">
-                                <path d="M22 90c-8-2-12-14-8-28l6-22c1-4 7-4 8 0l4 20 3-32c1-5 8-5 8 0v32l4-24c1-5 8-4 8 1l-2 31 5-18c2-5 8-3 7 2l-8 38c-2 10-8 16-18 16h-7z"/>
-                            </svg>
-                            <svg class="hand right" viewBox="0 0 72 96" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round">
-                                <path d="M50 90c8-2 12-14 8-28l-6-22c-1-4-7-4-8 0l-4 20-3-32c-1-5-8-5-8 0v32l-4-24c-1-5-8-4-8 1l2 31-5-18c-2-5-8-3-7 2l8 38c2 10 8 16 18 16h7z"/>
-                            </svg>
+                            <div class="hand left"><img src="hand-cursor.png?v=25" alt=""></div>
+                            <div class="hand right"><img src="hand-cursor.png?v=25" alt=""></div>
                         </div>
                     </div>
                     <div class="scene b">
-                        <svg class="pinch-hand" viewBox="0 0 120 140" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round">
-                            <path d="M40 128c-10-3-14-16-8-32l8-24c1-4 7-4 8 0l5 18 2-36c0-5 7-5 8 0v36l6-28c1-5 8-4 8 1l-1 29 14-10c4-3 9 2 7 6l-18 28c-4 8-10 14-22 14h-7z"/>
-                            <circle cx="78" cy="52" r="4" fill="#fff" stroke="none"/>
-                            <circle cx="96" cy="68" r="4" fill="#fff" stroke="none"/>
-                            <path d="M78 52c8 4 14 10 18 16" stroke-dasharray="3 3" opacity="0.8"/>
-                        </svg>
+                        <div class="pinch-hand">
+                            <img src="hand-cursor.png?v=25" alt="">
+                            <span class="pix thumb-tip"></span>
+                            <span class="pix pinky-tip"></span>
+                        </div>
                         <div class="tap-ring"></div>
                         <div class="tap-ring two"></div>
                     </div>
-                </div>
-                <button id="btnStart" type="button">Avvia</button>
+                        </div>
+                        <img class="gba-sub" src="glitch-your-face.png?v=27" alt="glitch your face">
+                        <div class="gba-press">PRESS START</div>
+                    <button id="btnStart" type="button">Avvia</button>
             </div>
             <div id="busy"><span class="spin"></span><span id="busyText">Caricamento...</span></div>
         </div>
@@ -317,7 +414,8 @@
         </div>
     </div>
     <div id="errBox"></div>
-    <script src="gesture-tap.js?v=11"></script>
-    <script src="sketch.js?v=11"></script>
+    <script src="friend-cutout.js?v=27"></script>
+    <script src="gesture-tap.js?v=27"></script>
+    <script src="sketch.js?v=27"></script>
 </body>
 </html>

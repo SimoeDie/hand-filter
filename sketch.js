@@ -1,6 +1,6 @@
 // Hand Filter — Finestra Magica
 // Finestra: pollice + indice di entrambe le mani
-// Effetto: tap indice+mignolo sinistra = successivo, destra = precedente
+// Effetto: pollice rosso + mignolo blu si toccano. Sinistra = successivo, destra = precedente
 
 const VIDEO_W = 640;
 const VIDEO_H = 480;
@@ -50,7 +50,7 @@ let motionPts = [];
 let mediaRecorder = null;
 let recordedChunks = [];
 let isRecording = false;
-let lastFile = null;
+let rainSong = null;
 
 function showError(msg) {
     let box = document.getElementById("errBox");
@@ -106,7 +106,7 @@ function setup() {
     faceSprite = createGraphics(64, 76);
     faceSprite.pixelDensity(1);
     drawPlaceholderFace(faceSprite);
-    loadImage("lollo.png", (img) => {
+    loadImage("WhatsApp%20Image%202026-09-11%20at%2010.38.20.png", (img) => {
         friendImg = img;
         prepareFriendSprite(img);
     });
@@ -263,7 +263,13 @@ function parkVideoElement(el) {
     el.style.transform = "none";
 }
 
-window.addEventListener("pagehide", stopCameraStream);
+window.addEventListener("pagehide", function () {
+    stopCameraStream();
+    if (rainSong) {
+        rainSong.pause();
+        rainSong.currentTime = 0;
+    }
+});
 window.addEventListener("beforeunload", stopCameraStream);
 
 function videoEl() {
@@ -441,33 +447,32 @@ function drawPlaceholderFace(g) {
 }
 
 function prepareFriendSprite(img) {
-    let sx = img.width * 0.12;
-    let sy = img.height * 0.06;
-    let sw = img.width * 0.76;
-    let sh = img.height * 0.52;
-    let outW = 220;
+    let sx = 0;
+    let sy = 0;
+    let sw = img.width;
+    let sh = img.height;
+    let outW = 520;
     let outH = Math.round(outW * (sh / sw));
     faceSprite = createGraphics(outW, outH);
     faceSprite.pixelDensity(1);
     faceSprite.clear();
     faceSprite.image(img, 0, 0, outW, outH, sx, sy, sw, sh);
     faceSprite.loadPixels();
-    let p = faceSprite.pixels;
-    for (let i = 0; i < p.length; i += 4) {
-        if (p[i] < 22 && p[i + 1] < 22 && p[i + 2] < 22) p[i + 3] = 0;
+    if (typeof applyFriendCutout === "function") {
+        applyFriendCutout(faceSprite.pixels, faceSprite.width, faceSprite.height);
     }
     faceSprite.updatePixels();
 }
 
 function setupRain() {
     rainDrops = [];
-    for (let i = 0; i < 12; i++) {
+    for (let i = 0; i < 28; i++) {
         rainDrops.push({
-            x: Math.random() * FILTER_W,
-            y: Math.random() * FILTER_H,
-            s: 28 + Math.random() * 26,
-            speed: 1.8 + Math.random() * 2.8,
-            rot: Math.random() * 0.35 - 0.175
+            x: Math.random() * VIDEO_W,
+            y: Math.random() * VIDEO_H,
+            s: 110 + Math.random() * 50,
+            speed: 1.1 + Math.random() * 1.6,
+            rot: Math.random() * 0.22 - 0.11
         });
     }
 }
@@ -485,12 +490,32 @@ function nextEffect() {
     currentEffect = (currentEffect + 1) % effectNames.length;
     setEffectName();
     syncBodySeg();
+    syncRainMusic();
 }
 
 function prevEffect() {
     currentEffect = (currentEffect - 1 + effectNames.length) % effectNames.length;
     setEffectName();
     syncBodySeg();
+    syncRainMusic();
+}
+
+function syncRainMusic() {
+    if (currentEffect === 6 && appStarted) {
+        if (!rainSong) {
+            rainSong = new Audio(encodeURI("vidssave.com Tuyo (Narcos Theme) (Extended Version) 48KBPS.mp4"));
+            rainSong.loop = true;
+            rainSong.preload = "auto";
+            rainSong.volume = 0.8;
+        }
+        let playTry = rainSong.play();
+        if (playTry && playTry.catch) playTry.catch(function () {});
+        return;
+    }
+    if (rainSong) {
+        rainSong.pause();
+        rainSong.currentTime = 0;
+    }
 }
 
 function pointOf(hand, key) {
@@ -569,7 +594,10 @@ function draw() {
                 drawingContext.rect(smoothRect.x1, smoothRect.y1, smoothRect.x2 - smoothRect.x1, smoothRect.y2 - smoothRect.y1);
                 drawingContext.clip();
                 drawCover(filterBuffer);
-                if (currentEffect === 6) drawPersonInFront();
+                if (currentEffect === 6) {
+                    drawRainFaces();
+                    drawPersonInFront();
+                }
             } finally {
                 drawingContext.restore();
                 noTint();
@@ -748,19 +776,28 @@ function applyParticleEffect() {
 
 function applyRainEffect() {
     filterBuffer.image(video, 0, 0, FILTER_W, FILTER_H);
+}
+
+function drawRainFaces() {
     if (!faceSprite || !faceSprite.width) return;
+    let t = coverTransform();
+    let aspect = faceSprite.height / faceSprite.width;
+    drawingContext.imageSmoothingEnabled = true;
     for (let d of rainDrops) {
-        filterBuffer.push();
-        filterBuffer.translate(d.x, d.y);
-        filterBuffer.rotate(d.rot);
-        let aspect = faceSprite.height / faceSprite.width;
-        filterBuffer.image(faceSprite, -d.s / 2, -(d.s * aspect) / 2, d.s, d.s * aspect);
-        filterBuffer.pop();
+        let cx = t.ox + d.x * t.scale;
+        let cy = t.oy + d.y * t.scale;
+        let w = d.s * t.scale;
+        let h = w * aspect;
+        push();
+        translate(cx, cy);
+        rotate(d.rot);
+        image(faceSprite, -w / 2, -h / 2, w, h);
+        pop();
         d.y += d.speed;
-        d.x += Math.sin(frameCount * 0.02 + d.x) * 0.4;
-        if (d.y > FILTER_H + 40) {
-            d.y = -40;
-            d.x = Math.random() * FILTER_W;
+        d.x += Math.sin(frameCount * 0.02 + d.x) * 0.35;
+        if (d.y > VIDEO_H + d.s) {
+            d.y = -d.s;
+            d.x = Math.random() * VIDEO_W;
         }
     }
 }
@@ -790,48 +827,73 @@ function applyGameBoyEffect() {
 }
 
 function drawHands() {
+    let colThumb = [255, 70, 90];
+    let colPinky = [50, 170, 255];
     stroke(255);
     strokeWeight(2);
     for (let hand of hands) {
         if (!hand || !hand.keypoints || hand.keypoints.length < 21) continue;
         let connections = [
-            [0, 1], [1, 2], [2, 3], [3, 4],
+            [0, 1],
             [0, 5], [5, 6], [6, 7], [7, 8],
             [0, 9], [9, 10], [10, 11], [11, 12],
             [0, 13], [13, 14], [14, 15], [15, 16],
-            [0, 17], [17, 18], [18, 19], [19, 20],
+            [0, 17], [17, 18],
             [5, 9], [9, 13], [13, 17]
         ];
         for (let [a, b] of connections) {
             if (!hand.keypoints[a] || !hand.keypoints[b]) continue;
             let pa = mapFromVideo(hand.keypoints[a].x, hand.keypoints[a].y);
             let pb = mapFromVideo(hand.keypoints[b].x, hand.keypoints[b].y);
+            stroke(255);
+            strokeWeight(2);
             line(pa.x, pa.y, pb.x, pb.y);
         }
-        for (let kp of hand.keypoints) {
+
+        function drawBone(a, b, col) {
+            if (!hand.keypoints[a] || !hand.keypoints[b]) return;
+            let pa = mapFromVideo(hand.keypoints[a].x, hand.keypoints[a].y);
+            let pb = mapFromVideo(hand.keypoints[b].x, hand.keypoints[b].y);
+            stroke(col[0], col[1], col[2]);
+            strokeWeight(4);
+            line(pa.x, pa.y, pb.x, pb.y);
+        }
+        drawBone(1, 2, colThumb);
+        drawBone(2, 3, colThumb);
+        drawBone(3, 4, colThumb);
+        drawBone(18, 19, colPinky);
+        drawBone(19, 20, colPinky);
+
+        for (let k = 0; k < hand.keypoints.length; k++) {
+            let kp = hand.keypoints[k];
             if (!kp) continue;
             let p = mapFromVideo(kp.x, kp.y);
-            fill(255);
             noStroke();
-            circle(p.x, p.y, 5);
-            stroke(255);
+            if (k === KP.thumbTip) fill(colThumb[0], colThumb[1], colThumb[2]);
+            else if (k === KP.pinkyTip) fill(colPinky[0], colPinky[1], colPinky[2]);
+            else fill(255);
+            circle(p.x, p.y, k === KP.thumbTip || k === KP.pinkyTip ? 12 : 5);
         }
 
-        let idxP = pointOf(hand, KP.indexTip);
+        let thP = pointOf(hand, KP.thumbTip);
         let pnkP = pointOf(hand, KP.pinkyTip);
-        if (!idxP || !pnkP) continue;
-        let idx = mapFromVideo(idxP.x, idxP.y);
+        if (!thP || !pnkP) continue;
+        let th = mapFromVideo(thP.x, thP.y);
         let pnk = mapFromVideo(pnkP.x, pnkP.y);
         let ratio = typeof pinchRatio === "function" ? pinchRatio(hand) : 99;
-        if (ratio < 1.05) {
-            let ready = ratio < 0.72;
-            stroke(255, ready ? 255 : 140);
-            strokeWeight(ready ? 4 : 2);
-            line(idx.x, idx.y, pnk.x, pnk.y);
+        let touching = ratio < 0.88;
+        if (touching) {
             noStroke();
-            fill(255);
-            circle(idx.x, idx.y, ready ? 14 : 10);
-            circle(pnk.x, pnk.y, ready ? 14 : 10);
+            fill(255, 240, 80, 180);
+            circle((th.x + pnk.x) / 2, (th.y + pnk.y) / 2, 22);
+            stroke(255, 240, 80);
+            strokeWeight(5);
+            line(th.x, th.y, pnk.x, pnk.y);
+            noStroke();
+            fill(colThumb[0], colThumb[1], colThumb[2]);
+            circle(th.x, th.y, 18);
+            fill(colPinky[0], colPinky[1], colPinky[2]);
+            circle(pnk.x, pnk.y, 18);
         }
     }
 }
