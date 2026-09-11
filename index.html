@@ -2,35 +2,244 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Hand Filter - Finestra Magica</title>
-    <script src="https://cdn.jsdelivr.net/npm/p5@1.9.1/lib/p5.js"></script>
-    <script src="https://unpkg.com/ml5@1/dist/ml5.js"></script>
+    <script src="lib/p5.min.js"></script>
+    <script src="lib/ml5.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            background: #111;
+        html, body {
+            height: 100%;
+            background: #000;
             overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+        #shell {
+            width: 100%;
+            height: 100%;
+            height: 100dvh;
+            background: #000;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
+            padding: 10px 10px 0;
+        }
+        #topBar {
+            height: 40px;
+            display: flex;
             align-items: center;
-            height: 100vh;
-            font-family: 'Segoe UI', sans-serif;
+            padding: 0 10px;
+            flex-shrink: 0;
         }
-        canvas { display: block; }
-        #busy {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+        #filterName {
             color: #fff;
-            font-size: 18px;
-            background: rgba(0,0,0,0.85);
-            padding: 20px 30px;
-            border-radius: 10px;
-            border: 1px solid #333;
-            z-index: 10;
+            font-size: 15px;
+            font-weight: 500;
+            letter-spacing: 0.01em;
+            opacity: 0;
         }
+        #filterName.on { opacity: 1; }
+        #view {
+            flex: 1;
+            min-height: 0;
+            border-radius: 28px;
+            overflow: hidden;
+            position: relative;
+            background: #141414;
+        }
+        #view canvas {
+            display: block;
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        #bottomBar {
+            height: 120px;
+            flex-shrink: 0;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #centerBtns {
+            display: flex;
+            align-items: center;
+            gap: 22px;
+        }
+        #btnRec, #btnPhoto, #btnShare, #btnStart {
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            cursor: pointer;
+        }
+        #btnRec {
+            width: 62px;
+            height: 62px;
+            border-radius: 50%;
+            border: 3px solid #fff;
+            background: #fff;
+            color: #000;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+        }
+        #btnRec.recording {
+            background: #ff3b30;
+            border-color: #ff3b30;
+            color: #fff;
+        }
+        #btnPhoto {
+            width: 74px;
+            height: 74px;
+            border-radius: 50%;
+            border: 4px solid #fff;
+            background: #f4f4f4;
+            box-shadow: inset 0 0 0 3px #000;
+        }
+        #btnPhoto:active { background: #ddd; }
+        #btnShare {
+            position: absolute;
+            right: 22px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 44px;
+            height: 44px;
+            border: none;
+            background: transparent;
+            color: #fff;
+            padding: 0;
+        }
+        #btnShare svg { width: 28px; height: 28px; display: block; }
+        #btnShare:disabled { opacity: 0.35; }
+
+        #startOverlay {
+            position: absolute;
+            inset: 0;
+            z-index: 6;
+            background: #1a1a1a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        #scenes {
+            position: relative;
+            width: min(86%, 560px);
+            height: min(58%, 360px);
+        }
+        .scene {
+            position: absolute;
+            inset: 0;
+        }
+        .scene.a {
+            opacity: 1;
+            animation: sceneA 5.2s ease-in-out infinite;
+        }
+        .scene.b {
+            opacity: 0;
+            animation: sceneB 5.2s ease-in-out infinite;
+        }
+        @keyframes sceneA {
+            0%, 42% { opacity: 1; }
+            50%, 100% { opacity: 0; }
+        }
+        @keyframes sceneB {
+            0%, 48% { opacity: 0; }
+            56%, 92% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+        .hands-row {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .hand {
+            width: 110px;
+            height: 148px;
+        }
+        .scene.a .hand.left { animation: spreadL 2.6s ease-in-out infinite; }
+        .scene.a .hand.right { animation: spreadR 2.6s ease-in-out infinite; }
+        @keyframes spreadL {
+            0%, 100% { transform: translateX(28px); }
+            50% { transform: translateX(0); }
+        }
+        @keyframes spreadR {
+            0%, 100% { transform: translateX(-28px); }
+            50% { transform: translateX(0); }
+        }
+        .dash-rect {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 38%;
+            height: 52%;
+            transform: translate(-50%, -50%) scale(0.55);
+            border: 2px dashed #fff;
+            border-radius: 6px;
+            opacity: 0.35;
+            animation: dashGrow 2.6s ease-in-out infinite;
+        }
+        @keyframes dashGrow {
+            0%, 12% { opacity: 0.25; transform: translate(-50%, -50%) scale(0.5); }
+            45%, 70% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            100% { opacity: 0.2; transform: translate(-50%, -50%) scale(1.05); }
+        }
+        .pinch-hand {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 120px;
+            height: 140px;
+            transform: translate(-50%, -52%);
+        }
+        .tap-ring {
+            position: absolute;
+            left: 50%;
+            top: 38%;
+            width: 18px;
+            height: 18px;
+            margin-left: -9px;
+            border: 2px solid #fff;
+            border-radius: 50%;
+            opacity: 0;
+            animation: tapPulse 2.6s ease-out infinite;
+        }
+        .tap-ring.two { animation-delay: 0.85s; }
+        @keyframes tapPulse {
+            0%, 18% { opacity: 0; transform: scale(0.4); }
+            28% { opacity: 1; transform: scale(1); }
+            55%, 100% { opacity: 0; transform: scale(1.8); }
+        }
+        #btnStart {
+            position: absolute;
+            bottom: 28px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #fff;
+            color: #000;
+            border: none;
+            padding: 12px 40px;
+            border-radius: 999px;
+            font-size: 17px;
+            font-weight: 600;
+        }
+
+        #busy {
+            position: absolute;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 16px;
+            background: rgba(0,0,0,0.72);
+            z-index: 8;
+            padding: 20px;
+            text-align: center;
+        }
+        #busy.show { display: flex; }
         #busy .spin {
             display: inline-block;
             width: 18px; height: 18px;
@@ -40,15 +249,16 @@
             animation: rot 0.8s linear infinite;
             vertical-align: middle;
             margin-right: 10px;
+            flex-shrink: 0;
         }
         @keyframes rot { to { transform: rotate(360deg); } }
         #errBox {
             position: fixed;
-            bottom: 20px;
+            bottom: 130px;
             left: 20px;
             right: 20px;
             color: #ff6b6b;
-            font-family: Consolas, monospace;
+            font-family: ui-monospace, Consolas, monospace;
             font-size: 13px;
             background: rgba(0,0,0,0.9);
             padding: 10px 14px;
@@ -61,8 +271,53 @@
     </style>
 </head>
 <body>
-    <div id="busy"><span class="spin"></span><span id="busyText">Caricamento...</span></div>
+    <div id="shell">
+        <div id="topBar"><span id="filterName"></span></div>
+        <div id="view">
+            <div id="startOverlay">
+                <div id="scenes">
+                    <div class="scene a">
+                        <div class="dash-rect"></div>
+                        <div class="hands-row">
+                            <svg class="hand left" viewBox="0 0 72 96" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round">
+                                <path d="M22 90c-8-2-12-14-8-28l6-22c1-4 7-4 8 0l4 20 3-32c1-5 8-5 8 0v32l4-24c1-5 8-4 8 1l-2 31 5-18c2-5 8-3 7 2l-8 38c-2 10-8 16-18 16h-7z"/>
+                            </svg>
+                            <svg class="hand right" viewBox="0 0 72 96" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round">
+                                <path d="M50 90c8-2 12-14 8-28l-6-22c-1-4-7-4-8 0l-4 20-3-32c-1-5-8-5-8 0v32l-4-24c-1-5-8-4-8 1l2 31-5-18c-2-5-8-3-7 2l8 38c2 10 8 16 18 16h7z"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="scene b">
+                        <svg class="pinch-hand" viewBox="0 0 120 140" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round">
+                            <path d="M40 128c-10-3-14-16-8-32l8-24c1-4 7-4 8 0l5 18 2-36c0-5 7-5 8 0v36l6-28c1-5 8-4 8 1l-1 29 14-10c4-3 9 2 7 6l-18 28c-4 8-10 14-22 14h-7z"/>
+                            <circle cx="78" cy="52" r="4" fill="#fff" stroke="none"/>
+                            <circle cx="96" cy="68" r="4" fill="#fff" stroke="none"/>
+                            <path d="M78 52c8 4 14 10 18 16" stroke-dasharray="3 3" opacity="0.8"/>
+                        </svg>
+                        <div class="tap-ring"></div>
+                        <div class="tap-ring two"></div>
+                    </div>
+                </div>
+                <button id="btnStart" type="button">Avvia</button>
+            </div>
+            <div id="busy"><span class="spin"></span><span id="busyText">Caricamento...</span></div>
+        </div>
+        <div id="bottomBar">
+            <div id="centerBtns">
+                <button id="btnRec" type="button" disabled>REC</button>
+                <button id="btnPhoto" type="button" disabled aria-label="Foto"></button>
+            </div>
+            <button id="btnShare" type="button" disabled aria-label="Condividi">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 4v10"/>
+                    <path d="M8 8l4-4 4 4"/>
+                    <path d="M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/>
+                </svg>
+            </button>
+        </div>
+    </div>
     <div id="errBox"></div>
-    <script src="sketch.js"></script>
+    <script src="gesture-tap.js?v=11"></script>
+    <script src="sketch.js?v=11"></script>
 </body>
 </html>
