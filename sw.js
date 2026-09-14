@@ -1,4 +1,4 @@
-const CACHE = "hand-filter-pwa-v1";
+const CACHE = "hand-filter-pwa-v2";
 const PRECACHE = [
     "./",
     "./index.html",

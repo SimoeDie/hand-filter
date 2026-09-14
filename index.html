@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#000000">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="workshok">
@@ -380,18 +381,18 @@
         <div id="topBar"><span id="filterName"></span></div>
         <div id="view">
             <div id="startOverlay">
-                    <img id="gbaLogo" src="workshok-logo-px.png?v=27" alt="workshok">
+                    <img id="gbaLogo" src="workshok-logo-px.png?v=30" alt="workshok">
                         <div id="scenes">
                     <div class="scene a">
                         <div class="dash-rect"></div>
                         <div class="hands-row">
-                            <div class="hand left"><img src="hand-cursor.png?v=25" alt=""></div>
-                            <div class="hand right"><img src="hand-cursor.png?v=25" alt=""></div>
+                            <div class="hand left"><img src="hand-cursor.png?v=30" alt=""></div>
+                            <div class="hand right"><img src="hand-cursor.png?v=30" alt=""></div>
                         </div>
                     </div>
                     <div class="scene b">
                         <div class="pinch-hand">
-                            <img src="hand-cursor.png?v=25" alt="">
+                            <img src="hand-cursor.png?v=30" alt="">
                             <span class="pix thumb-tip"></span>
                             <span class="pix pinky-tip"></span>
                         </div>
@@ -399,7 +400,7 @@
                         <div class="tap-ring two"></div>
                     </div>
                         </div>
-                        <img class="gba-sub" src="glitch-your-face.png?v=27" alt="glitch your face">
+                        <img class="gba-sub" src="glitch-your-face.png?v=30" alt="glitch your face">
                         <div class="gba-press">PRESS START</div>
                     <button id="btnStart" type="button">Avvia</button>
             </div>
@@ -420,13 +421,13 @@
         </div>
     </div>
     <div id="errBox"></div>
-    <script src="friend-cutout.js?v=29"></script>
-    <script src="gesture-tap.js?v=29"></script>
-    <script src="sketch.js?v=29"></script>
+    <script src="friend-cutout.js?v=30"></script>
+    <script src="gesture-tap.js?v=30"></script>
+    <script src="sketch.js?v=30"></script>
     <script>
         if ("serviceWorker" in navigator) {
             window.addEventListener("load", function () {
-                navigator.serviceWorker.register("./sw.js").catch(function () {});
+                navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch(function () {});
             });
         }
     </script>
